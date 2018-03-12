@@ -114,7 +114,8 @@ public class Core : MonoBehaviour {
 
     public void OneVOne_OnClick()
     {
-
+        string xmlTest = "<RipsawMessage><MessageType>MatchMakingAdd</MessageType><Account><ID>" + _accountID.ToString() + "</ID><Guid>" + _accountGuid.ToString() + "</Guid></Account><Join><Match><Players>1v1</Players><Team></Team><Type>Default</Type></Match></Join></RipsawMessage>";
+        _spinUpClient.Send(xmlTest, true);
     }
 
     public void Packs_OnClick()
@@ -149,6 +150,8 @@ public class Core : MonoBehaviour {
                 if (mainMenu == null)
                     mainMenu = GameObject.Find("mainMenu");
                 mainMenu.SetActive(false);
+
+                StatusTextChange("Loading list of servers...");
 
                 _loadBalancerClient.OnConnectionChanged += _loadBalancerClient_OnConnectionChanged; ;
                 _loadBalancerClient.OnIncomingDataReceived += _loadBalancerClient_OnIncomingDataReceived; ;
@@ -196,6 +199,7 @@ public class Core : MonoBehaviour {
                         break;
                     }
                     break;
+                
             }
         }
     }
@@ -206,7 +210,6 @@ public class Core : MonoBehaviour {
         switch (ConnectionStatus)
         {
             case RipsawClient.eConnectionStatus.Connected:
-                //_loadBalancerClient.Send(new RipsawMessage(TypeMessage.ServerList, new List<object>() { _account, "List" }));
                 _loadBalancerClient.Send("<RipsawMessage><MessageType>ServerList</MessageType><Account><ID>" + _accountID.ToString() + "</ID><Guid>" + _accountGuid.ToString() + "</Guid></Account></RipsawMessage>", true);
                 break;
         }
@@ -251,7 +254,7 @@ public class Core : MonoBehaviour {
 
                     break;
                 case "MatchMakingAccountAdded":
-                    //AddText("Account added to matchmaking...");
+                    Debug.Log("Account added into matchmaking...");
                     break;
                 case "MatchMakingAccountRemoved":
                     //AddText("Account removed from matchmaking...");

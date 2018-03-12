@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Card {
+public class Card : MonoBehaviour
+{
 
-    public long _id;
+    public long ID;
     public string _name;
     public string _description;
     public long? _attack;
@@ -15,18 +16,7 @@ public class Card {
     public Set _set = new Set();
     
 
-    public Card(long id, string name, string description, long? attack, long? hp, Dictionary<Resource, long> resourcesToFlip, Dictionary<Resource, long> resourcesToPlay, Pack pack, Set set)
-    {
-        _id = id;
-        _name = name;
-        _description = description;
-        _attack = attack;
-        _hp = hp;
-        _resourcesToFlip = resourcesToFlip;
-        _resourcesToPlay = resourcesToPlay;
-        _pack = pack;
-        _set = set;
-    }
+    
 	
 
 
