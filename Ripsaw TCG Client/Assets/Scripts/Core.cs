@@ -2,12 +2,14 @@
 using System.Xml;
 using UnityEngine;
 
-public class Core : MonoBehaviour {
+public class Core : MonoBehaviour
+{
 
 
     private RipsawClient.RipsawClient _authenticationClient = new RipsawClient.RipsawClient();
     private RipsawClient.RipsawClient _loadBalancerClient = new RipsawClient.RipsawClient();
     private RipsawClient.RipsawClient _spinUpClient = new RipsawClient.RipsawClient();
+    private RipsawClient.RipsawClient _gameServerClient = new RipsawClient.RipsawClient();
     private string _statusText = "";
     private UnityEngine.UI.Text _statusTextControl = null;
     private bool _statusTextChanged = false;
@@ -27,11 +29,14 @@ public class Core : MonoBehaviour {
     private UnityEngine.UI.Button _packButton;
     private UnityEngine.UI.Button _deckButton;
 
+    GameObject _deckList;
+
     long _accountID = -1;
     Guid _accountGuid = Guid.Empty;
 
     // Use this for initialization
-    void Start () {
+    void Start()
+    {
 
         if (_loginButton == null)
             _loginButton = GameObject.Find("loginButton").GetComponent<UnityEngine.UI.Button>();
@@ -57,18 +62,20 @@ public class Core : MonoBehaviour {
         _packButton.onClick.AddListener(Packs_OnClick);
         _deckButton.onClick.AddListener(Decks_OnClick);
 
+        _deckList = GameObject.Find("deckList");
+
         if (_statusTextControl == null)
             _statusTextControl = GameObject.Find("statusText").GetComponent<UnityEngine.UI.Text>();
 
         _authenticationClient.OnConnectionChanged += _authenticationClient_OnConnectionChanged;
         _authenticationClient.OnIncomingDataReceived += _authenticationClient_OnIncomingDataReceived;
         _authenticationClient.Connect("ripsawstudios.ddns.net", 39450);
-	}
+    }
 
     private void _authenticationClient_OnIncomingDataReceived(RipsawClient.RipsawClient Client, RipsawClient.DataReader DataReader, ref byte[] BufferData)
     {
         string incomingMessage = "";
-        while((incomingMessage = DataReader.IncomingStringParse(ref BufferData)) != "")
+        while ((incomingMessage = DataReader.IncomingStringParse(ref BufferData)) != "")
         {
             XmlDocument xml = new XmlDocument();
             xml.LoadXml(incomingMessage);
@@ -122,7 +129,7 @@ public class Core : MonoBehaviour {
     {
 
     }
-    
+
     public void Decks_OnClick()
     {
 
@@ -134,11 +141,12 @@ public class Core : MonoBehaviour {
         _statusTextControl.text = _statusText;
     }
 
-    
-    // Update is called once per frame
-    void Update () {
 
-		lock(_statusTextLock)
+    // Update is called once per frame
+    void Update()
+    {
+
+        lock (_statusTextLock)
             if (_statusTextChanged)
                 UpdateStatusText();
 
@@ -160,7 +168,7 @@ public class Core : MonoBehaviour {
             }
         }
 
-	}
+    }
 
     private void StatusTextChange(string text)
     {
@@ -199,7 +207,7 @@ public class Core : MonoBehaviour {
                         break;
                     }
                     break;
-                
+
             }
         }
     }
@@ -262,13 +270,14 @@ public class Core : MonoBehaviour {
                 case "GameCreated":
                     ////a game has been created, and we now have the ip and port of the game server we need to connect to...
                     //AddText("Game Server ready for connection... " + xml.ChildNodes[0].ChildNodes[1].ChildNodes[0].InnerText + " : " + xml.ChildNodes[0].ChildNodes[1].ChildNodes[1].InnerText);
-
+                    _lobbyMenu.SetActive(false);
                     long _gameID = Convert.ToInt64(xml.ChildNodes[0].ChildNodes[2].ChildNodes[0].InnerText);
+                    Debug.Log(_gameID);
 
                     ////let's kill off any previous events if they had them
-                    //_gameServerClient.OnIncomingDataReceived -= _gameServerClient_OnIncomingDataReceived;
-                    //_gameServerClient.OnConnectionChanged -= _gameServerClient_OnConnectionChanged;
-                    ////_gameServerClient.Disconnect();
+                    _gameServerClient.OnIncomingDataReceived -= _gameServerClient_OnIncomingDataReceived;
+                    _gameServerClient.OnConnectionChanged -= _gameServerClient_OnConnectionChanged;
+                    //_gameServerClient.Disconnect();
 
                     ////add new events
                     //_gameServerClient.OnIncomingDataReceived += _gameServerClient_OnIncomingDataReceived;
@@ -289,6 +298,60 @@ public class Core : MonoBehaviour {
                 _spinUpClient.Send("<RipsawMessage><MessageType>ServerConnection</MessageType><Account><ID>" + _accountID.ToString() + "</ID><Guid>" + _accountGuid.ToString() + "</Guid></Account></RipsawMessage>", true);
                 _statusTextControl.gameObject.SetActive(false);
                 _lobbyMenu.SetActive(true);
+                break;
+        }
+    }
+
+    private void _gameServerClient_OnIncomingDataReceived(RipsawClient.RipsawClient Client, RipsawClient.DataReader DataReader, ref byte[] BufferData)
+    {
+        string incomingMessage = "";
+        while ((incomingMessage = DataReader.IncomingStringParse(ref BufferData)) != "")
+        {
+            XmlDocument xml = new XmlDocument();
+            xml.LoadXml(incomingMessage);
+            string messageType = xml.ChildNodes[0].ChildNodes[0].InnerText;
+            Debug.Log(messageType);
+
+            XmlNodeList nodeList;
+
+            switch (messageType)
+            {
+                case "DeckList":
+                    nodeList = xml.ChildNodes[0].ChildNodes[2].ChildNodes;
+                    for (int i = 0; i < nodeList.Count; i++)
+                    {
+                        //listBox1.Invoke((Action)delegate { listBox1.Items.Add(nodeList[i].ChildNodes[1].InnerText + " (" + nodeList[i].ChildNodes[0].InnerText + ")"); });
+
+                    }
+                    _deckList.SetActive(true);
+                    break;
+                case "GameStart":
+
+                    break;
+            }
+        }
+    }
+
+    private void _gameServerClient_OnConnectionChanged(RipsawClient.RipsawClient Client, RipsawClient.eConnectionStatus ConnectionStatus)
+    {
+        switch (ConnectionStatus)
+        {
+            case RipsawClient.eConnectionStatus.Failed:
+                Debug.Log("Test client failed to connect to the game server... --> Retrying...");
+                _gameServerClient.Connect("ripsawstudios.ddns.net", 39451);
+                break;
+            case RipsawClient.eConnectionStatus.Disconnected:
+                Debug.Log("Test client disconnected from the game server... --> Retrying...");
+                _gameServerClient.Connect("ripsawstudios.ddns.net", 39451);
+                break;
+            case RipsawClient.eConnectionStatus.Connecting:
+                Debug.Log("Test client attempting connection to the game server...");
+                break;
+            case RipsawClient.eConnectionStatus.Connected:
+                Debug.Log("Test client connected successfully to the game server...");
+                _gameServerClient.Send("<RipsawMessage><MessageType>DeckList</MessageType><Account><ID>" + _accountID.ToString() + "</ID><Guid>" + _accountGuid.ToString() + "</Guid></Account></RipsawMessage>", true);
+                //_gameForm = new GameForm(_gameServerClient, _account, _gameID);
+                //this.Invoke((Action)delegate { InvokeShowGameForm(); });
                 break;
         }
     }
